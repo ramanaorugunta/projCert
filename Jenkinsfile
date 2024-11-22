@@ -1,99 +1,52 @@
 pipeline {
-  agent none
-  stages{
-    stage ('Puppet Agent Installation') {
-      agent {
-         label 'slave'
-        }
+  agent {
+    label 'slave1'
+  }
+  environment {
+    DOCKERHUB_CREDENTIALS = credentials('dockerloginid')
+  }
+  stages {
+    stage('Puppet Agent Installation') {
+
       steps {
-        sh '''wget https://apt.puppetlabs.com/puppet6-release-focal.deb
-              sudo dpkg -i puppet6-release-focal.deb
-              sudo apt-get update -y
-              sudo apt-get install puppet-agent -y'''
-        }
+        sh ''
+        'wget https://apt.puppetlabs.com/puppet6-release-focal.deb
+        sudo dpkg - i puppet6 - release - focal.deb
+        sudo apt - get update - y
+        sudo apt - get install puppet - agent - y ''
+        '
+      }
+    }   
+
+    stage('SCM_Checkout') {
+      steps {
+        echo 'Perform SCM_Checkout'
+        git 'https://github.com/ramanaorugunta/projCert.git'
+      }
     }
-   stage ('Docker installation'){
-     agent any
-     steps{
-        git 'https://github.com/Sudhey/DevopsCertification.git'
-        dir('.') {
-          sh ' sudo ansible-playbook playbook.yaml -i inventory.txt'
+
+    stage("Building image and running container") {
+
+      stage('Build Docker Image') {
+        steps {
+          sh 'docker version'
+          sh "docker build -t oruguntaramana/dcp-sep21-phpwebapp:${BUILD_NUMBER} ."
+          sh 'docker image list'
+          sh "docker tag oruguntaramana/dcp-sep21-phpwebapp:${BUILD_NUMBER} oruguntaramana/dcp-sep21-phpwebapp:latest"
         }
-    }       
-   }
-   stage("Building image and running container"){
-    agent any 
-    steps{
-        git 'https://github.com/Sudhey/DevopsCertification.git'
-        
-        sshPublisher(publishers: [sshPublisherDesc(configName: 'Test Server', transfers: [
-            sshTransfer(
-                cleanRemote: false, 
-                excludes: '', 
-                execCommand: '''
-                    docker container stop edureka_demo
-                    docker container rm -f edureka_demo
-                    docker image rmi -f edureka_demo
-                    cd /home/ubuntu/docker
-                    docker image build -t edureka_demo .
-                ''',
-                execTimeout: 120000, 
-                flatten: false, 
-                makeEmptyDirs: false, 
-                noDefaultExcludes: false, 
-                patternSeparator: '[, ]+', 
-                remoteDirectory: '/docker', 
-                remoteDirectorySDF: false, 
-                removePrefix: '', 
-                sourceFiles: '**/*'
-            ),
-            sshTransfer(
-                cleanRemote: false, 
-                excludes: '', 
-                execCommand: 'docker container run -dit --name edureka_demo -p 80:80 edureka_demo', 
-                execTimeout: 120000, 
-                flatten: false, 
-                makeEmptyDirs: false, 
-                noDefaultExcludes: false, 
-                patternSeparator: '[, ]+', 
-                remoteDirectory: '', 
-                remoteDirectorySDF: false, 
-                removePrefix: '', 
-                
-                sourceFiles: ''
-            )
-        ], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+      }
+      stage('Login2DockerHub') {
+
+        steps {
+          sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+        }
+      }
+      stage('Publish_to_Docker_Registry and Running container"') {
+        steps {
+          sh "docker push oruguntaramana/dcp-sep21-phpwebapp:latest"
+          sh "docker run -it -p 8089:8080 oruguntaramana/dcp-sep21-phpwebapp"
+        }
+      }
+
     }
-   }
-    stage("Delete Container"){
-        agent any
-        when {
-            expression {
-                currentBuild.result == 'FAILURE' ||
-                currentBuild.result == 'UNSTABLE'
-            }
-        }
-        steps{
-            sshPublisher(publishers: [sshPublisherDesc(configName: 'Test Server', transfers: [
-            sshTransfer(
-                cleanRemote: false, 
-                excludes: '', 
-                execCommand: '''
-                    docker container stop edureka_demo
-                    docker container rm -f edureka_demo
-                ''', 
-                execTimeout: 120000, 
-                flatten: false, 
-                makeEmptyDirs: false, 
-                noDefaultExcludes: false, 
-                patternSeparator: '[, ]+', 
-                remoteDirectory: '', 
-                remoteDirectorySDF: false, 
-                removePrefix: '', 
-                sourceFiles: ''
-            )
-        ], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
-        }
-    }
-}
-}
+  }
