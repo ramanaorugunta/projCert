@@ -1,7 +1,2 @@
-FROM devopsedu/webapp
-
-COPY website/ /var/www/html
-
-RUN rm /var/www/html/index.html
-
-CMD ["apachectl", "-D", "FOREGROUND"]
+FROM php:7.2-apache
+COPY ./website /var/www/html/
