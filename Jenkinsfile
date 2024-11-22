@@ -25,9 +25,7 @@ pipeline {
     agent any 
     steps{
         git 'https://github.com/Sudhey/DevopsCertification.git'
-        //script {
-        //    error ( ' Intentional failure')
-        //}
+        
         sshPublisher(publishers: [sshPublisherDesc(configName: 'Test Server', transfers: [
             sshTransfer(
                 cleanRemote: false, 
