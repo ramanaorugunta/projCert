@@ -1,0 +1,2 @@
+[slave]
+172.31.19.91 ansible_user=devopsadmin

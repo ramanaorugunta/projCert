@@ -22,7 +22,17 @@ pipeline {
             echo 'Perform SCM_Checkout'
             git 'https://github.com/ramanaorugunta/projCert.git'
             }
-        }  
+        }
+
+        stage ('Docker installation'){
+    
+          steps{
+              git 'https://github.com/ramanaorugunta/projCert.git'
+              dir('.') {
+                sh ' sudo ansible-playbook playbook.yaml -i inventory.txt'
+              }
+          }       
+        }
 
         stage('Build Docker Image') {
             steps {
